@@ -1,0 +1,17 @@
+FROM golang:latest
+
+WORKDIR /go/server
+
+COPY go.mod go.sum /go/server/
+
+# 获取依赖的包
+RUN go env -w GOPROXY=https://goproxy.cn,direct \
+    && go mod download -x
+
+# 复制项目代码
+COPY ./ /go/server
+
+RUN go build -o help-others .
+
+ENTRYPOINT ["/go/server/help-others"]
+# 构建出来的容器太大了，应该只保留最后编译出来的程序
