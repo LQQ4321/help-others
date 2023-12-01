@@ -6,6 +6,10 @@ import (
 )
 
 func init() {
+
+	// 强制日志颜色化
+	gin.ForceConsoleColor()
+
 	router := gin.Default()
 
 	// 定义静态文件路由
