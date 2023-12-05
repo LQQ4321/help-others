@@ -22,21 +22,6 @@ package db
 
 // 6.为了保证用户的唯一性，用户的名称应该唯一，并且不能携带空格
 
-// 网站配置
-// 新用户，准备发布的求助，准备发布的帮助的权限继承自这里
-type Config struct {
-	ID                   int `gorm:"primaryKey"`
-	MaxPublish           int //最大发布数量(如果修改该值后，今天的发布数量已经超额，那么不作删除多余求助的处理)
-	MaxHelp              int //对于每个求助的最大帮助数量
-	MaxComment           int //最大评论数量
-	UserBan              int //用户权限
-	SeekHelpBan          int //求助权限
-	LendHandBan          int //帮助权限
-	InitScore            int //用户的初始分数
-	UserLoginDuration    int //每次的登录时长(用户),单位是小时
-	ManagerLoginDuration int //每次的登录时长(管理员)
-}
-
 type User struct {
 	ID        int    `gorm:"primaryKey"`
 	Name      string //用户名
