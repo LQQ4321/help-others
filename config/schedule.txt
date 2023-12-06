@@ -11,21 +11,24 @@
     4.1如果是今天提交的第一份代码，那么就创建一个以今天日期为名的文件夹
         (记得只有一个数位的日期前要补零,方便排序)
     4.2对于每一份代码，都应该创建一个以数据库主键为名的文件夹，
-        然后创建origin.language和copy.language两份文件，表示原件和副本，
-        并且执行git命令,从而创建一个初始化的版本 ：(1) git init (2) git add origin.language
+        然后创建origin.txt表示原件
 5.管理员登录网站，查看上传的题目描述信息，下载用户提交的代码文件夹到本地
 
-6.管理员在本地对origin.language进行修改
+6.管理员在本地对origin.txt进行修改
 
-7.上传修改过后的origin.language文件，然后覆盖服务器上的对应文件
+7.上传修改过后的origin.txt文件,也就是copy-id.txt
 
-8.执行git diff origin.language > ./diff.txt命令
+8.执行diff -u origin.txt copy-id.txt > diff-id.txt命令
+注意，当我们要将diff渲染到web页面上的是时候，Unified模式是很简单的。Split模式就有点困难了，
+我们要让没有修改的行一一对应，然后修改的行就进行颜色区分，通过仔细观察github的例子可以发现，
+我们只需要以" "来区分修改区间的起点和终点即可，在前一个相同区间的终点到后一个相同区间的起点之前的区间，
+就是被修改的行。我们选定max(origin.rows,copy.rows)作为这一个修改区间的长度，较短的一方就用灰色的空行补全。
 
 final： 到目前为止，一次debug已经完成了！！！
 
-1.后续对于完成debug的任务进行查看，只需要获取到diff.txt文件即可，
+1.后续对于完成debug的任务进行查看，只需要获取到diff-id.txt文件即可，
     然后根据第一个字符来进行对应的渲染即可
 
-2.关于渲染，有两种模式即可，分别是Split和unified（先不加Ignore whitespace功能）
+2.关于渲染，有两种模式即可，分别是Split和Unified（先不加Ignore Whitespace功能）
 
 

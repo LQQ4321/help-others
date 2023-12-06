@@ -10,11 +10,13 @@ import (
 )
 
 type jsonFunc func([]string, *gin.Context)
+type formFunc func(*gin.Context)
 
 var (
 	DB          *gorm.DB
 	logger      *zap.SugaredLogger
 	jsonFuncMap map[string]jsonFunc
+	formFuncMap map[string]formFunc
 )
 
 func ClientInit(loggerInstance *zap.SugaredLogger) {
@@ -22,7 +24,12 @@ func ClientInit(loggerInstance *zap.SugaredLogger) {
 	logger = loggerInstance
 	jsonFuncMap = make(map[string]jsonFunc)
 	jsonFuncMap = map[string]jsonFunc{
-		"login": login,
+		"verifyUser":  verifyUser,
+		"requestList": requestList,
+	}
+	formFuncMap = make(map[string]formFunc)
+	formFuncMap = map[string]formFunc{
+		"seekAHelp": seekAHelp,
 	}
 }
 
@@ -41,6 +48,15 @@ func jsonRequest(c *gin.Context) {
 	}
 	if v, ok := jsonFuncMap[request.RequestType]; ok {
 		v(request.Info, c)
+	} else {
+		c.JSON(http.StatusNotFound, nil)
+	}
+}
+
+func formRequest(c *gin.Context) {
+	requestType := c.Request.FormValue("requestType")
+	if v, ok := formFuncMap[requestType]; ok {
+		v(c)
 	} else {
 		c.JSON(http.StatusNotFound, nil)
 	}

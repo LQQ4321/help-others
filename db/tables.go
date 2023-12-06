@@ -47,7 +47,7 @@ type SeekHelp struct {
 	Score       int    //悬赏的分数
 	Like        int    //点赞数
 	Ban         int    //该条求助的权限
-	Status      int    //当前代码的状态，如 0 未debug 1 成功debug 2 debug失败 等
+	Status      int    //当前代码的状态，如 0 未debug 1 成功debug等
 }
 
 // 帮助
