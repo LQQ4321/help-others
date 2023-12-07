@@ -42,7 +42,7 @@ func initRand() {
 }
 
 func initFiles() {
-	if err := os.MkdirAll(config.CODE_FOLDER, 0755); err != nil {
-		logger.Fatal(config.CODE_FOLDER+" create fail :", zap.Error(err))
+	if err := os.MkdirAll(config.USER_UPLOAD_FOLDER, 0755); err != nil {
+		logger.Fatal(config.USER_UPLOAD_FOLDER+" create fail :", zap.Error(err))
 	}
 }

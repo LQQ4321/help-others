@@ -1,6 +1,7 @@
 package client
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"os"
@@ -15,29 +16,53 @@ import (
 
 func seekAHelp(c *gin.Context) {
 	var response struct {
-		Status string `json:"status"`
+		Status         string      `json:"status"`
+		SingleSeekHelp db.SeekHelp `json:"singleSeekHelp"`
 	}
 	response.Status = config.RETURN_FAIL
+	logger.Infoln(c.Request)
 	files := c.Request.MultipartForm.File["files"] //还是说是 files[]
 	_score := c.Request.FormValue("score")
 	imageType := c.Request.FormValue("imageType")
 	codeType := c.Request.FormValue("codeType")
 	user_id := c.Request.FormValue("userId")
-	date := c.Request.FormValue("date")
-	language := c.Request.FormValue("language")
+	uploadTime := c.Request.FormValue("uploadTime")
 	problemLink := c.Request.FormValue("problemLink")
 	remark := c.Request.FormValue("remark")
 	if len(files) != 2 || len(_score) == 0 || len(imageType) == 0 ||
-		len(codeType) == 0 || len(user_id) == 0 || len(date) == 0 ||
+		len(codeType) == 0 || len(user_id) == 0 || len(uploadTime) == 0 ||
 		len(problemLink) == 0 || len(remark) == 0 {
 		logger.Errorln(fmt.Errorf("parse fail"))
 		c.JSON(http.StatusOK, response)
 		return
 	}
-	// 创建当天的文件夹
-	dirName := strings.Split(date, " ")[0]
-	err := os.MkdirAll(config.CODE_FOLDER+dirName, 0755)
+	date := strings.Split(uploadTime, " ")[0]
+	var curDateId int64
+	err := DB.Model(&db.SeekHelp{}).
+		Where("upload_time LIKE ?", date+"%").Count(&curDateId).Error
 	if err != nil {
+		logger.Errorln(err)
+		c.JSON(http.StatusOK, response)
+		return
+	}
+	curDateId++
+	// 创建当天的文件夹
+	dirName := config.USER_UPLOAD_FOLDER + date + "/" +
+		strconv.FormatInt(curDateId, 10) + "/"
+	err = os.MkdirAll(dirName, 0755)
+	if err != nil {
+		logger.Errorln(err)
+		c.JSON(http.StatusOK, response)
+		return
+	}
+	codeFilePath := dirName + "origin.txt"
+	if err := c.SaveUploadedFile(files[0], codeFilePath); err != nil {
+		logger.Errorln(err)
+		c.JSON(http.StatusOK, response)
+		return
+	}
+	imageFilePath := dirName + config.PROBLEM_PICTURE_NAME + "." + imageType
+	if err := c.SaveUploadedFile(files[1], imageFilePath); err != nil {
 		logger.Errorln(err)
 		c.JSON(http.StatusOK, response)
 		return
@@ -54,20 +79,37 @@ func seekAHelp(c *gin.Context) {
 		c.JSON(http.StatusOK, response)
 		return
 	}
+	var websiteConfig []int
+	keys := []string{"MaxHelp", "MaxComment", "SeekHelpBan"}
+	for _, v := range keys {
+		result, err := RDB.Get(context.Background(), v).Result()
+		if err != nil {
+			logger.Errorln(err)
+			c.JSON(http.StatusOK, response)
+			return
+		}
+		num, err := strconv.Atoi(result)
+		if err != nil {
+			logger.Errorln(err)
+			c.JSON(http.StatusOK, response)
+			return
+		}
+		websiteConfig = append(websiteConfig, num)
+	}
 	err = DB.Transaction(func(tx *gorm.DB) error {
-		seekHelp := db.SeekHelp{
+		response.SingleSeekHelp = db.SeekHelp{
 			ProblemLink: problemLink,
-			ImagePath:   "",
+			ImagePath:   imageFilePath,
 			TopicRemark: remark,
 			UploadTime:  date,
-			CodePath:    "",
-			Language:    language,
-			MaxHelp:     0,
-			MaxComment:  0,
+			CodePath:    codeFilePath,
+			Language:    config.Language[codeType],
+			MaxHelp:     websiteConfig[0],
+			MaxComment:  websiteConfig[1],
 			Score:       score,
-			Ban:         0,
+			Ban:         websiteConfig[2],
 		}
-		err := tx.Model(&db.SeekHelp{}).Create(&seekHelp).Error
+		err := tx.Model(&db.SeekHelp{}).Create(&response.SingleSeekHelp).Error
 		if err != nil {
 			return err
 		}
@@ -81,7 +123,7 @@ func seekAHelp(c *gin.Context) {
 		if len(user.SeekHelp) != 0 {
 			user.SeekHelp += "#"
 		}
-		user.SeekHelp += strconv.Itoa(seekHelp.ID)
+		user.SeekHelp += strconv.Itoa(response.SingleSeekHelp.ID)
 		// 这里的updates可能有bug,有ID，应该不用使用Where了吧
 		return tx.Model(&db.User{}).Updates(&user).Error
 	})

@@ -56,10 +56,16 @@ func MysqlInit(loggerInstance *zap.Logger) {
 		Password: "",
 		DB:       0,
 	})
-	cmdResult := RDB.SetNX(context.Background(), "websiteConfig", 1, 0)
-	if cmdResult.Err() != nil {
-		logger.Fatal("set website config fail :", zap.Error(cmdResult.Err()))
-	} else if cmdResult.Val() { //websiteConfig键还未存在
+	// TODO 下面应该使用事务，不然锁是加上了，但是值写入的时候可能出现错误，从而导致后续重启也无法写入数据
+	// TODO 每次都重新加载配置，因为配置可能会修改，方便调试
+	err = RDB.Del(context.Background(), "websiteConfig").Err()
+	if err != nil {
+		logger.Fatal("release lock fail :", zap.Error(err))
+	}
+	result, err := RDB.SetNX(context.Background(), "websiteConfig", 1, 0).Result()
+	if err != nil {
+		logger.Fatal("set website config fail :", zap.Error(err))
+	} else if result { //websiteConfig键还未存在
 		for k, v := range config.WebsiteConfig {
 			err = RDB.Set(context.Background(), k, v, 0).Err()
 			if err != nil {

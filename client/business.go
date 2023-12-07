@@ -5,6 +5,7 @@ import (
 
 	"github.com/LQQ4321/help-others/db"
 	"github.com/gin-gonic/gin"
+	"github.com/redis/go-redis/v9"
 	"go.uber.org/zap"
 	"gorm.io/gorm"
 )
@@ -14,6 +15,7 @@ type formFunc func(*gin.Context)
 
 var (
 	DB          *gorm.DB
+	RDB         *redis.Client
 	logger      *zap.SugaredLogger
 	jsonFuncMap map[string]jsonFunc
 	formFuncMap map[string]formFunc
@@ -21,6 +23,7 @@ var (
 
 func ClientInit(loggerInstance *zap.SugaredLogger) {
 	DB = db.DB
+	RDB = db.RDB
 	logger = loggerInstance
 	jsonFuncMap = make(map[string]jsonFunc)
 	jsonFuncMap = map[string]jsonFunc{

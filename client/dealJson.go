@@ -1,6 +1,7 @@
 package client
 
 import (
+	"context"
 	"errors"
 	"net/http"
 	"strconv"
@@ -21,6 +22,15 @@ func verifyUser(info []string, c *gin.Context) {
 	response.Status = config.RETURN_FAIL
 	response.Info = make([]string, 0)
 	if info[0] == "login" {
+		var response struct {
+			Status     string   `json:"status"`
+			ConfigData []int    `json:"configData"`
+			User       db.User  `json:"user"`
+			Info       []string `json:"info"`
+		}
+		response.Status = config.RETURN_FAIL
+		response.ConfigData = make([]int, 0)
+		response.Info = make([]string, 0)
 		err := DB.Model(&db.User{}).
 			Where(&db.User{Name: info[1], Password: info[2]}).
 			First(&response.User).Error
@@ -33,9 +43,28 @@ func verifyUser(info []string, c *gin.Context) {
 				logger.Errorln(err)
 			}
 		} else {
-			response.User.Password = ""
-			response.Status = config.RETURN_SUCCEED
+			configs := []string{"MaxSeekHelpPerDay", "LoginDuration"}
+			for i, v := range configs {
+				result, err := RDB.Get(context.Background(), v).Result()
+				if err != nil {
+					logger.Errorln(err)
+					response.Info = append(response.Info, config.INTERNAL_ERROR)
+					break
+				}
+				num, err := strconv.Atoi(result)
+				if err != nil {
+					logger.Errorln(err)
+					response.Info = append(response.Info, config.INTERNAL_ERROR)
+					break
+				}
+				response.ConfigData = append(response.ConfigData, num)
+				if i+1 == len(configs) {
+					response.Status = config.RETURN_SUCCEED
+				}
+			}
 		}
+		c.JSON(http.StatusOK, response)
+		return
 	} else if info[0] == "register" {
 
 	} else if info[0] == "retrievePassword" {
@@ -51,7 +80,7 @@ func requestList(info []string, c *gin.Context) {
 	if info[0] == "seekHelp" {
 		var response struct {
 			Status       string        `json:"status"`
-			SeekHelpList []db.SeekHelp `json:"seekHelpLiist"`
+			SeekHelpList []db.SeekHelp `json:"seekHelpList"`
 			Info         []string      `json:"info"`
 		}
 		response.Status = config.RETURN_FAIL
