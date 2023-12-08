@@ -22,15 +22,15 @@ const (
 // 网站配置
 var (
 	WebsiteConfig = map[string]int{
-		"MaxPublish":        10,   //最大发布数量(如果修改该值后，今天的发布数量已经超额，那么不作删除多余求助的处理)
-		"MaxHelp":           10,   //对于每个求助的最大帮助数量
-		"MaxSeekHelpPerDay": 3,    //每名用户每天的求助数量
-		"MaxComment":        100,  //最大评论数量(对于每个求助和帮助而言)
-		"UserBan":           0b00, //用户权限
-		"SeekHelpBan":       0b00, //求助权限
-		"LendHandBan":       0b00, //帮助权限
-		"InitScore":         3,    //用户的初始分数
-		"LoginDuration":     24,   //每次的登录时长,单位是小时
+		"MaxPublish":        10,     //最大发布数量(如果修改该值后，今天的发布数量已经超额，那么不作删除多余求助的处理)
+		"MaxHelp":           10,     //对于每个求助的最大帮助数量
+		"MaxSeekHelpPerDay": 3,      //每名用户每天的求助数量
+		"MaxComment":        100,    //最大评论数量(对于每个求助和帮助而言)
+		"UserBan":           0b1111, //用户权限
+		"SeekHelpBan":       0b111,  //求助权限
+		"LendHandBan":       0b11,   //帮助权限
+		"InitScore":         3,      //用户的初始分数
+		"LoginDuration":     24,     //每次的登录时长,单位是小时
 	}
 )
 

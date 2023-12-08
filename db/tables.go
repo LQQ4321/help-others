@@ -16,8 +16,8 @@ package db
 // 这是为了避免个别求助者不将悬赏分数下发给帮助者。当然，求助者不能自己帮助自己
 
 // 5.关于权限的统一说明，1 表示禁止 0 表示允许,下面的权限默认由低位到高位，最后用户具有的权限取并集
-// 5.1 用户权限 发布求助，发布帮助，查看求助内容，评论
-// 5.2 求助权限 发布帮助，查看求助内容，评论
+// 5.1 用户权限 查看求助内容，发布求助，发布帮助，评论
+// 5.2 求助权限 查看求助内容，发布帮助，评论
 // 5.3 帮助权限 查看帮助内容，评论
 
 // 6.为了保证用户的唯一性，用户的名称应该唯一，并且不能携带空格
@@ -35,19 +35,21 @@ type User struct {
 
 // 求助
 type SeekHelp struct {
-	ID          int    `gorm:"primaryKey"`
-	ProblemLink string //题目链接(ProblemLink和ImagePath两者至少要有一个)
-	ImagePath   string //题目的截图地址(目前仅限上传一张图片好了)
-	TopicRemark string //题目文字描述或备注(不能为空，信息当然是越多越好)
-	UploadTime  string //提交日期 2023-01-10 09:00
-	CodePath    string //代码保留的位置 files/date/id
-	Language    string //代码的语言类型
-	MaxHelp     int    //最大帮助数量
-	MaxComment  int    //最大评论数量
-	Score       int    //悬赏的分数
-	Like        int    //点赞数
-	Ban         int    //该条求助的权限
-	Status      int    //当前代码的状态，如 0 未debug 1 成功debug等
+	ID             int    `gorm:"primaryKey"`
+	SeekHelperId   string //求助人id
+	SeekHelperName string //求助人姓名
+	ProblemLink    string //题目链接(ProblemLink和ImagePath两者至少要有一个)
+	ImagePath      string //题目的截图地址(目前仅限上传一张图片好了)
+	TopicRemark    string //题目文字描述或备注(不能为空，信息当然是越多越好)
+	UploadTime     string //提交日期 2023-01-10 09:00
+	CodePath       string //代码保留的位置 files/date/id
+	Language       string //代码的语言类型
+	MaxHelp        int    //最大帮助数量
+	MaxComment     int    //最大评论数量
+	Score          int    //悬赏的分数
+	Like           int    //点赞数
+	Ban            int    //该条求助的权限
+	Status         int    //当前代码的状态，如 0 未debug 1 成功debug等
 }
 
 // 帮助

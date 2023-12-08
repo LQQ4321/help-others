@@ -157,3 +157,14 @@ func requestList(info []string, c *gin.Context) {
 		c.JSON(http.StatusOK, response)
 	}
 }
+
+// 删除一条求助信息，和该条求助信息有关的所有数据都会被删除
+// 为了保证数据同步，最好前端若干次操作后进行一次网络请求(寻找一个平衡点)
+// TODO 等到项目上线的时候，浏览器的同源策略保证请求是manager调用的，就不需要认证了
+// {seekHelpId}
+// func deleteASeekHelp(info []string, c *gin.Context) {
+// 	var response struct {
+// 		Status string `json:"status"`
+// 	}
+
+// }
