@@ -93,6 +93,13 @@ func requestList(info []string, c *gin.Context) {
 			response.Info = append(response.Info, config.INTERNAL_ERROR)
 			logger.Errorln(err)
 		} else {
+			// 感觉可以不用从数据库中读这些数据出来
+			for i, _ := range response.SeekHelpList {
+				response.SeekHelpList[i].ProblemLink = ""
+				response.SeekHelpList[i].ImagePath = ""
+				response.SeekHelpList[i].CodePath = ""
+				response.SeekHelpList[i].TopicRemark = ""
+			}
 			response.Status = config.RETURN_SUCCEED
 		}
 		c.JSON(http.StatusOK, response)
@@ -118,6 +125,10 @@ func requestList(info []string, c *gin.Context) {
 				response.Info = append(response.Info, config.INTERNAL_ERROR)
 				logger.Error(err)
 			} else {
+				for i, _ := range response.LendHandList {
+					response.LendHandList[i].Remark = ""
+					response.LendHandList[i].CodePath = ""
+				}
 				response.Status = config.RETURN_SUCCEED
 			}
 		}
@@ -157,6 +168,68 @@ func requestList(info []string, c *gin.Context) {
 		c.JSON(http.StatusOK, response)
 	}
 }
+
+// {seekHelp,seekHelpId}
+// {lendHand,lendHandId}
+func requestShowDataOne(info []string, c *gin.Context) {
+	var response struct {
+		Status      string `json:"status"`
+		CodePath    string `json:"codePath"`
+		ImagePath   string `json:"imagePath"`
+		Remark      string `json:"remark"`
+		ProblemLink string `json:"problemLink"`
+	}
+	response.Status = config.RETURN_FAIL
+	if info[0] == "seekHelp" {
+		seekHelpId, err := strconv.Atoi(info[1])
+		if err != nil {
+			logger.Errorln(err)
+		} else {
+			seekHelp := db.SeekHelp{}
+			err = DB.Model(&db.SeekHelp{}).Where(&db.SeekHelp{ID: seekHelpId}).
+				First(&seekHelp).Error
+			if err != nil {
+				logger.Errorln(err)
+			} else {
+				response.CodePath = seekHelp.CodePath
+				response.ImagePath = seekHelp.ImagePath
+				response.Remark = seekHelp.TopicRemark
+				response.ProblemLink = seekHelp.ProblemLink
+				response.Status = config.RETURN_SUCCEED
+			}
+		}
+	} else if info[0] == "lendHand" {
+		lendHandId, err := strconv.Atoi(info[1])
+		if err != nil {
+			logger.Errorln(err)
+		} else {
+			lendHand := db.LendHand{}
+			err = DB.Model(&db.LendHand{}).Where(&db.LendHand{ID: lendHandId}).
+				First(&lendHand).Error
+			if err != nil {
+				logger.Errorln(err)
+			} else {
+				response.CodePath = lendHand.CodePath
+				response.Remark = lendHand.Remark
+				response.Status = config.RETURN_SUCCEED
+			}
+		}
+	}
+	c.JSON(http.StatusOK, response)
+}
+
+// {"seekHelp",seekHelpId}
+// {"lendHand",lendHandId}
+// func requestShowData(info []string, c *gin.Context) {
+// 	if info[0] == "seekHelp" {
+// 		seekHelpId, err := strconv.Atoi(info[1])
+// 		if err != nil {
+// 			logger.Errorln(err)
+// 		}
+// 	} else if info[0] == "lendHand" {
+
+// 	}
+// }
 
 // 删除一条求助信息，和该条求助信息有关的所有数据都会被删除
 // 为了保证数据同步，最好前端若干次操作后进行一次网络请求(寻找一个平衡点)

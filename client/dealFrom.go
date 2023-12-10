@@ -29,6 +29,7 @@ func seekAHelp(c *gin.Context) {
 			c.JSON(http.StatusOK, response)
 			return
 		}
+		// 这里关闭的文件，会不会一直是最后一个
 		defer file.Close()
 		files = append(files, file)
 	}

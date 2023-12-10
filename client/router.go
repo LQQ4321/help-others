@@ -25,11 +25,11 @@ func init() {
 	router.MaxMultipartMemory = 8 << 20 //8MB
 
 	// 定义静态文件路由
-	router.Static("/", "./assets/web")
+	// router.Static("/", "./assets/web")
 
+	router.GET("/requestGet", getRequest1)
 	router.POST("/requestJson", jsonRequest)
 	router.POST("/requestForm", formRequest)
-
 
 	// 启动服务器
 	go router.Run(config.URL_PORT)

@@ -11,6 +11,7 @@ import (
 )
 
 type jsonFunc func([]string, *gin.Context)
+type getFunc func(*gin.Context)
 type formFunc func(*gin.Context)
 
 var (
@@ -19,6 +20,7 @@ var (
 	logger      *zap.SugaredLogger
 	jsonFuncMap map[string]jsonFunc
 	formFuncMap map[string]formFunc
+	getFuncMap  map[string]getFunc
 )
 
 func ClientInit(loggerInstance *zap.SugaredLogger) {
@@ -27,12 +29,17 @@ func ClientInit(loggerInstance *zap.SugaredLogger) {
 	logger = loggerInstance
 	jsonFuncMap = make(map[string]jsonFunc)
 	jsonFuncMap = map[string]jsonFunc{
-		"verifyUser":  verifyUser,
-		"requestList": requestList,
+		"verifyUser":         verifyUser,
+		"requestList":        requestList,
+		"requestShowDataOne": requestShowDataOne,
 	}
 	formFuncMap = make(map[string]formFunc)
 	formFuncMap = map[string]formFunc{
 		"seekAHelp": seekAHelp,
+	}
+	getFuncMap = make(map[string]getFunc)
+	getFuncMap = map[string]getFunc{
+		"downloadFile": downloadFile,
 	}
 }
 
@@ -59,6 +66,15 @@ func jsonRequest(c *gin.Context) {
 func formRequest(c *gin.Context) {
 	requestType := c.Request.FormValue("requestType")
 	if v, ok := formFuncMap[requestType]; ok {
+		v(c)
+	} else {
+		c.JSON(http.StatusNotFound, nil)
+	}
+}
+
+func getRequest1(c *gin.Context) {
+	requestType := c.GetHeader("requestType")
+	if v, ok := getFuncMap[requestType]; ok {
 		v(c)
 	} else {
 		c.JSON(http.StatusNotFound, nil)
