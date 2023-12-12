@@ -18,7 +18,7 @@
 
 7.上传修改过后的origin.txt文件,也就是copy-id.txt
 
-8.执行diff -u origin.txt copy-id.txt > diff-id.txt命令
+8.执行diff -U 10000 origin.txt copy-id.txt > diff-id.txt命令
 注意，当我们要将diff渲染到web页面上的是时候，Unified模式是很简单的。Split模式就有点困难了，
 我们要让没有修改的行一一对应，然后修改的行就进行颜色区分，通过仔细观察github的例子可以发现，
 我们只需要以" "来区分修改区间的起点和终点即可，在前一个相同区间的终点到后一个相同区间的起点之前的区间，

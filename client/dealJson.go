@@ -12,6 +12,11 @@ import (
 	"gorm.io/gorm"
 )
 
+// {filePath}
+func downloadFile(info []string, c *gin.Context) {
+	c.File(info[0])
+}
+
 // {"login",name,password}
 func verifyUser(info []string, c *gin.Context) {
 	var response struct {
@@ -103,7 +108,6 @@ func requestList(info []string, c *gin.Context) {
 			response.Status = config.RETURN_SUCCEED
 		}
 		c.JSON(http.StatusOK, response)
-		logger.Infoln(response.Status)
 	} else if info[0] == "lendHand" {
 		var response struct {
 			Status       string        `json:"status"`

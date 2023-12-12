@@ -2,6 +2,7 @@ package client
 
 import (
 	"context"
+	"fmt"
 	"io"
 	"mime/multipart"
 	"net/http"
@@ -14,6 +15,139 @@ import (
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
 )
+
+func lendAHand(c *gin.Context) {
+	var response struct {
+		Status         string      `json:"status"`
+		SingleLendHand db.LendHand `json:"singleLendHand"`
+	}
+	response.Status = config.RETURN_FAIL
+	files := []multipart.File{}
+	for i := 1; i < 2; i++ {
+		file, _, err := c.Request.FormFile("file" + strconv.Itoa(i))
+		if err != nil {
+			logger.Errorln(err)
+			c.JSON(http.StatusOK, response)
+			return
+		}
+		// 这里关闭的文件，会不会一直是最后一个
+		defer file.Close()
+		files = append(files, file)
+	}
+	paramFields := []string{"remark", "codeType",
+		"seekHelpId", "date", "userId", "uploadTime"}
+	paramValues := []string{}
+	for _, v := range paramFields {
+		paramValues = append(paramValues, c.Request.FormValue(v))
+	}
+	for i, v := range paramFields {
+		if len(paramValues[i]) == 0 {
+			logger.Errorln("parse " + v + " param fail")
+			c.JSON(http.StatusOK, response)
+			return
+		}
+	}
+	seekHelpId, err := strconv.Atoi(paramValues[2])
+	if err != nil {
+		logger.Errorln(err)
+		c.JSON(http.StatusOK, response)
+		return
+	}
+	var lendHandCount int64
+	err = DB.Model(&db.LendHand{}).
+		Where(&db.LendHand{SeekHelpId: seekHelpId}).
+		Count(&lendHandCount).Error
+	if err != nil {
+		logger.Errorln(err)
+		c.JSON(http.StatusOK, response)
+		return
+	}
+	lendHandCount++
+	seekHelps := []db.SeekHelp{}
+	err = DB.Model(&db.SeekHelp{}).
+		Where("upload_time LIKE ?", paramValues[3]+"%").
+		Find(&seekHelps).Error
+	if err != nil {
+		logger.Errorln(err)
+		c.JSON(http.StatusOK, response)
+		return
+	}
+	seekHelpCount := -1
+	for i, _ := range seekHelps {
+		if seekHelps[i].ID == seekHelpId {
+			seekHelpCount = i + 1
+			break
+		}
+	}
+	if seekHelpCount == -1 {
+		logger.Errorln(fmt.Errorf("Not found seekHelpCount"))
+		c.JSON(http.StatusOK, response)
+		return
+	}
+	// TODO 应该调用diff -U NUM origin.txt copyId.txt > diffId.txt
+	codeFilePath := config.USER_UPLOAD_FOLDER + paramValues[3] + "/" +
+		strconv.Itoa(seekHelpCount) + "/" + "copy" +
+		strconv.Itoa(int(lendHandCount)) + ".txt"
+	err = SaveAFile(codeFilePath, files[0])
+	if err != nil {
+		logger.Errorln(err)
+		c.JSON(http.StatusOK, response)
+		return
+	}
+	userId, err := strconv.Atoi(paramValues[4])
+	if err != nil {
+		logger.Errorln(err)
+		c.JSON(http.StatusOK, response)
+		return
+	}
+	var websiteConfig []int
+	keys := []string{"MaxComment", "LendHandBan"}
+	for _, v := range keys {
+		result, err := RDB.Get(context.Background(), v).Result()
+		if err != nil {
+			logger.Errorln(err)
+			c.JSON(http.StatusOK, response)
+			return
+		}
+		num, err := strconv.Atoi(result)
+		if err != nil {
+			logger.Errorln(err)
+			c.JSON(http.StatusOK, response)
+			return
+		}
+		websiteConfig = append(websiteConfig, num)
+	}
+	err = DB.Transaction(func(tx *gorm.DB) error {
+		response.SingleLendHand = db.LendHand{
+			SeekHelpId: seekHelpId,
+			UploadTime: paramValues[5],
+			Remark:     paramValues[0],
+			CodePath:   codeFilePath,
+			MaxComment: websiteConfig[0],
+			Ban:        websiteConfig[1],
+		}
+		err = tx.Model(&db.LendHand{}).Create(&response.SingleLendHand).Error
+		if err != nil {
+			return err
+		}
+		user := db.User{}
+		err := tx.Model(&db.User{ID: userId}).First(&user).Error
+		if err != nil {
+			return err
+		}
+		if len(user.LendHand) != 0 {
+			user.LendHand += "#"
+		}
+		user.LendHand += strconv.Itoa(response.SingleLendHand.ID)
+		return tx.Model(&db.User{}).Where(&db.User{ID: user.ID}).Updates(&user).Error
+	})
+	if err != nil {
+		logger.Errorln(err)
+	} else {
+		response.Status = config.RETURN_SUCCEED
+	}
+	c.JSON(http.StatusOK, response)
+}
 
 func seekAHelp(c *gin.Context) {
 	var response struct {
