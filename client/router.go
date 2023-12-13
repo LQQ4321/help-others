@@ -14,6 +14,7 @@ func init() {
 	gin.ForceConsoleColor()
 
 	router := gin.Default()
+	// TODO 再服务器上调试应该修改的地方
 	router.Use(cors.New(cors.Config{
 		AllowOrigins:     []string{"*"},
 		AllowMethods:     []string{"GET", "POST", "PUT", "PATCH", "DELETE"},
@@ -26,7 +27,7 @@ func init() {
 
 	// 定义静态文件路由
 	router.Static("/", "./assets/web")
-	
+
 	router.POST("/requestJson", jsonRequest)
 	router.POST("/requestForm", formRequest)
 

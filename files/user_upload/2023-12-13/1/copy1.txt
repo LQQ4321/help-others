@@ -1,0 +1,111 @@
+--- origin.txt	2023-12-12 11:02:39.376735418 +0800
++++ copy.txt	2023-12-12 11:03:25.509337109 +0800
+@@ -1,16 +1,24 @@
+ #include<iostream>
+ using namespace std;
+ int main() {
+ 	int a,b;
+ 	cin >> a >> b;
+ 	cout << a + b;
+ 	for(int i = 0,sum = 0;i < 10;i++){
+-		sum += i;
++		sum -= i;
+ 	}
+ 	cout << sum << endl;
+ 	return 0;
+ }
+ 
+-int max(int a,int b) {
+-	return a > b ? a : b;
++
++
++
++
++int min(int a,int b) {
++	return a < b ? a : b;
+ }
++
++
++
++
+ #include<iostream>
+ using namespace std;
+ int main() {
+ 	int a,b;
+ 	cin >> a >> b;
+ 	cout << a + b;
+ 	for(int i = 0,sum = 0;i < 10;i++){
+-		sum += i;
++		sum -= i;
+ 	}
+ 	cout << sum << endl;
+ 	return 0;
+ }
+ 
+-int max(int a,int b) {
+-	return a > b ? a : b;
++
++
++
++
++int min(int a,int b) {
++	return a < b ? a : b;
+ }
++
++
++
++
+ #include<iostream>
+ using namespace std;
+ int main() {
+ 	int a,b;
+ 	cin >> a >> b;
+ 	cout << a + b;
+ 	for(int i = 0,sum = 0;i < 10;i++){
+-		sum += i;
++		sum -= i;
+ 	}
+ 	cout << sum << endl;
+ 	return 0;
+ }
+ 
+-int max(int a,int b) {
+-	return a > b ? a : b;
++
++
++
++
++int min(int a,int b) {
++	return a < b ? a : b;
+ }
++
++
++
++
+ #include<iostream>
+ using namespace std;
+ int main() {
+ 	int a,b;
+ 	cin >> a >> b;
+ 	cout << a + b;
+ 	for(int i = 0,sum = 0;i < 10;i++){
+-		sum += i;
++		sum -= i;
+ 	}
+ 	cout << sum << endl;
+ 	return 0;
+ }
+ 
+-int max(int a,int b) {
+-	return a > b ? a : b;
++
++
++
++
++int min(int a,int b) {
++	return a < b ? a : b;
+ }
++
++
++
++

@@ -2,11 +2,17 @@ package config
 
 // 网络配置
 const (
-	URL_PORT   = "127.0.0.1:8080" //":80"
-	MYSQL_PORT = ":5053"          //":3306"
-	REDIS_PORT = ":5054"          //":6379"
-	MYSQL_PATH = "175.178.57.154" //"help-others-mysql"
-	REDIS_PATH = "175.178.57.154" //"help-others-redis"
+	// TODO 再服务器上调试应该修改的地方
+	// URL_PORT   = ":80"
+	// MYSQL_PORT = ":3306"
+	// REDIS_PORT = ":6379"
+	// MYSQL_PATH = "help-others-mysql"
+	// REDIS_PATH = "help-others-redis"
+	URL_PORT   = "127.0.0.1:8080"
+	MYSQL_PORT = ":5053"
+	REDIS_PORT = ":5054"
+	MYSQL_PATH = "175.178.57.154"
+	REDIS_PATH = "175.178.57.154"
 	MYSQL_DSN  = "root:3515063609563648226@tcp(" +
 		MYSQL_PATH + MYSQL_PORT +
 		")/?charset=utf8mb4&parseTime=True&loc=Local"

@@ -27,6 +27,7 @@ func verifyUser(info []string, c *gin.Context) {
 	response.Status = config.RETURN_FAIL
 	response.Info = make([]string, 0)
 	if info[0] == "login" {
+		logger.Infoln(info)
 		var response struct {
 			Status     string   `json:"status"`
 			ConfigData []int    `json:"configData"`

@@ -27,7 +27,7 @@ func ClientInit(loggerInstance *zap.SugaredLogger) {
 	logger = loggerInstance
 	jsonFuncMap = make(map[string]jsonFunc)
 	jsonFuncMap = map[string]jsonFunc{
-		"verifyUser":         verifyUser,
+		"verifyUser":         verifyUser, //verifyUser
 		"requestList":        requestList,
 		"requestShowDataOne": requestShowDataOne,
 		"downloadFile":       downloadFile,
