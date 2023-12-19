@@ -31,6 +31,7 @@ func ClientInit(loggerInstance *zap.SugaredLogger) {
 		"requestList":        requestList,
 		"requestShowDataOne": requestShowDataOne,
 		"downloadFile":       downloadFile,
+		"likeOperate":        likeOperate,
 	}
 	formFuncMap = make(map[string]formFunc)
 	formFuncMap = map[string]formFunc{

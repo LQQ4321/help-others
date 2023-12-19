@@ -23,14 +23,16 @@ package db
 // 6.为了保证用户的唯一性，用户的名称应该唯一，并且不能携带空格
 
 type User struct {
-	ID        int    `gorm:"primaryKey"`
-	Name      string //用户名
-	Password  string //登录密码
-	IsManager bool   //是否是管理员
-	SeekHelp  string //求助他人的列表
-	LendHand  string //帮助他人的列表(每个人对于一次求助只能发布一份代码)
-	Ban       int    //用户权限
-	Score     int    //当前用户拥有的分值，初始是 3，分值为零时不允许发布求助
+	ID               int    `gorm:"primaryKey"`
+	Name             string //用户名
+	Password         string //登录密码
+	IsManager        bool   //是否是管理员
+	SeekHelp         string //求助他人的列表
+	LendHand         string //帮助他人的列表(每个人对于一次求助只能发布一份代码)
+	SeekHelpLikeList string //点赞过的求助列表
+	LendHandLikeList string //点赞过的求助列表
+	Ban              int    //用户权限
+	Score            int    //当前用户拥有的分值，初始是 3，分值为零时不允许发布求助
 }
 
 // 求助
@@ -54,25 +56,27 @@ type SeekHelp struct {
 
 // 帮助
 type LendHand struct {
-	ID         int    `gorm:"primaryKey"`
-	SeekHelpId int    //被帮助的是哪条求助
-	UploadTime string //发布时间
-	Remark     string //附带的解释信息
-	CodePath   string //代码地址
-	MaxComment int    //最大评论数量
-	Like       int    //点赞数
-	Ban        int    //该条帮助的权限
-	Status     int    //当前代码的状态，如 0 没有评价信息，只是上传成功 1 得到求助者的肯定 2 得到求助者的否定
+	ID             int    `gorm:"primaryKey"`
+	SeekHelpId     int    //被帮助的是哪条求助
+	LendHanderId   string //帮助人id
+	LendHanderName string //帮助人姓名
+	UploadTime     string //发布时间
+	Remark         string //附带的解释信息
+	CodePath       string //代码地址
+	MaxComment     int    //最大评论数量
+	Like           int    //点赞数
+	Ban            int    //该条帮助的权限
+	Status         int    //当前代码的状态，如 0 没有评价信息，只是上传成功 1 得到求助者的肯定
 }
 
 type Comment struct {
-	ID          int    `gorm:"primaryKey"`
-	Text        string //评论内容
-	SendTime    string //发布时间
-	Type        int    //评论的地方 0 求助页面 1 帮助页面
-	HelpId      int    //评论的是那一条求组或帮助
-	Publisher   string //发布人姓名
-	PublisherId int    //发布人在数据库表User中的id
-	Like        int    //点赞数
-	Ban         int    //评论的权限 0 正常显示 1 折叠该评论
+	ID           int    `gorm:"primaryKey"`
+	Text         string //评论内容
+	SendTime     string //发布时间
+	Type         int    //评论的地方 0 求助页面 1 帮助页面
+	SeekOrLendId int    //评论的是那一条求组或帮助
+	Publisher    string //发布人姓名
+	PublisherId  int    //发布人在数据库表User中的id
+	Like         int    //点赞数
+	Ban          int    //评论的权限 0 正常显示 1 折叠该评论
 }

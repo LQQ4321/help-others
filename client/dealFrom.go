@@ -118,20 +118,22 @@ func lendAHand(c *gin.Context) {
 		websiteConfig = append(websiteConfig, num)
 	}
 	err = DB.Transaction(func(tx *gorm.DB) error {
-		response.SingleLendHand = db.LendHand{
-			SeekHelpId: seekHelpId,
-			UploadTime: paramValues[5],
-			Remark:     paramValues[0],
-			CodePath:   codeFilePath,
-			MaxComment: websiteConfig[0],
-			Ban:        websiteConfig[1],
-		}
-		err = tx.Model(&db.LendHand{}).Create(&response.SingleLendHand).Error
+		user := db.User{}
+		err := tx.Model(&db.User{ID: userId}).First(&user).Error
 		if err != nil {
 			return err
 		}
-		user := db.User{}
-		err := tx.Model(&db.User{ID: userId}).First(&user).Error
+		response.SingleLendHand = db.LendHand{
+			SeekHelpId:     seekHelpId,
+			LendHanderId:   paramValues[4],
+			LendHanderName: user.Name,
+			UploadTime:     paramValues[5],
+			Remark:         paramValues[0],
+			CodePath:       codeFilePath,
+			MaxComment:     websiteConfig[0],
+			Ban:            websiteConfig[1],
+		}
+		err = tx.Model(&db.LendHand{}).Create(&response.SingleLendHand).Error
 		if err != nil {
 			return err
 		}

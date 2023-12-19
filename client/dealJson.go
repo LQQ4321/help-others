@@ -3,6 +3,7 @@ package client
 import (
 	"context"
 	"errors"
+	"fmt"
 	"net/http"
 	"strconv"
 
@@ -12,6 +13,124 @@ import (
 	"gorm.io/gorm"
 )
 
+// 点赞后不能取消
+// {seekHelp,seekHelpId,userId} 前端负责检验seekHelperId和userId是不是同一个人
+// {lendHand,lendHandId,userId} 前后端一起负责检验seekHelperId和userId是不是同一个人(防止数据不同步)
+// TODO 如果是求助者点的赞，应该把score给对应的帮助者
+func likeOperate(info []string, c *gin.Context) {
+	var response struct {
+		Status string `json:"status"`
+	}
+	response.Status = config.RETURN_FAIL
+	dbId, err := strconv.Atoi(info[1])
+	if err != nil {
+		logger.Errorln(err)
+		c.JSON(http.StatusOK, response)
+		return
+	}
+	userId, err := strconv.Atoi(info[2])
+	if err != nil {
+		logger.Errorln(err)
+		c.JSON(http.StatusOK, response)
+		return
+	}
+	user := db.User{}
+	err = DB.Model(&db.User{}).Where(&db.User{ID: userId}).
+		First(&user).Error
+	if err != nil {
+		logger.Errorln(err)
+		c.JSON(http.StatusOK, response)
+		return
+	}
+	if info[0] == "seekHelp" {
+		err = DB.Transaction(func(tx *gorm.DB) error {
+			seekHelp := db.SeekHelp{}
+			err := tx.Model(&db.SeekHelp{}).
+				Where(&db.SeekHelp{ID: dbId}).First(&seekHelp).Error
+			if err != nil {
+				return err
+			}
+			seekHelp.Like++
+			if len(user.SeekHelpLikeList) != 0 {
+				user.SeekHelpLikeList += "#"
+			}
+			user.SeekHelpLikeList += info[1]
+			err = tx.Model(&db.SeekHelp{}).
+				Where(&db.SeekHelp{ID: seekHelp.ID}).Updates(&seekHelp).Error
+			if err != nil {
+				return err
+			}
+			return tx.Model(&db.User{}).
+				Where(&db.User{ID: user.ID}).Updates(&user).Error
+		})
+		if err != nil {
+			logger.Errorln(err)
+		} else {
+			response.Status = config.RETURN_SUCCEED
+		}
+	} else if info[0] == "lendHand" {
+		err = DB.Transaction(func(tx *gorm.DB) error {
+			lendHand := db.LendHand{}
+			err := tx.Model(&db.LendHand{}).
+				Where(&db.LendHand{ID: dbId}).First(&lendHand).Error
+			if err != nil {
+				return err
+			}
+			seekHelp := db.SeekHelp{}
+			err = tx.Model(&db.SeekHelp{}).
+				Where(&db.SeekHelp{ID: lendHand.SeekHelpId}).First(&seekHelp).Error
+			if err != nil {
+				return err
+			}
+			// 点赞的人和求助的人是同一个人，说明求助者采纳了这份建议
+			if seekHelp.SeekHelperId == info[2] {
+				seekHelp.Status = 1
+				lendHand.Status = 1
+				lendHander := db.User{}
+				// 这里的错误不是数据库操作引起的，会不会有什么问题？
+				lendHanderId, err := strconv.Atoi(lendHand.LendHanderId)
+				if err != nil {
+					return err
+				}
+				err = tx.Model(&db.User{}).
+					Where(&db.User{ID: lendHanderId}).First(&lendHander).Error
+				if err != nil {
+					return err
+				}
+				lendHander.Score += seekHelp.Score
+				err = tx.Model(&db.SeekHelp{}).
+					Where(&db.SeekHelp{ID: seekHelp.ID}).Updates(&seekHelp).Error
+				if err != nil {
+					return err
+				}
+				err = tx.Model(&db.User{}).
+					Where(&db.User{ID: lendHander.ID}).Updates(&lendHander).Error
+				if err != nil {
+					return err
+				}
+			}
+			lendHand.Like++
+			if len(user.LendHandLikeList) != 0 {
+				user.LendHandLikeList += "#"
+			}
+			user.LendHandLikeList += info[1]
+			err = tx.Model(&db.LendHand{}).
+				Where(&db.LendHand{ID: lendHand.ID}).Updates(&lendHand).Error
+			if err != nil {
+				return err
+			}
+			return tx.Model(&db.User{}).
+				Where(&db.User{ID: user.ID}).Updates(&user).Error
+		})
+		if err != nil {
+			logger.Errorln(err)
+		} else {
+			response.Status = config.RETURN_SUCCEED
+		}
+	}
+	c.JSON(http.StatusOK, response)
+}
+
 // {filePath}
 func downloadFile(info []string, c *gin.Context) {
 	c.File(info[0])
@@ -19,64 +138,55 @@ func downloadFile(info []string, c *gin.Context) {
 
 // {"login",name,password}
 func verifyUser(info []string, c *gin.Context) {
-	var response struct {
-		Status string   `json:"status"`
-		Info   []string `json:"info"`
-		User   db.User  `json:"user"`
-	}
-	response.Status = config.RETURN_FAIL
-	response.Info = make([]string, 0)
 	if info[0] == "login" {
-		logger.Infoln(info)
 		var response struct {
-			Status     string   `json:"status"`
-			ConfigData []int    `json:"configData"`
-			User       db.User  `json:"user"`
-			Info       []string `json:"info"`
+			Status       string        `json:"status"`
+			ConfigData   []int         `json:"configData"`
+			User         db.User       `json:"user"`
+			UnsolvedList []db.SeekHelp `json:"unsolvedList"`
 		}
 		response.Status = config.RETURN_FAIL
 		response.ConfigData = make([]int, 0)
-		response.Info = make([]string, 0)
+		response.UnsolvedList = make([]db.SeekHelp, 0)
 		err := DB.Model(&db.User{}).
 			Where(&db.User{Name: info[1], Password: info[2]}).
 			First(&response.User).Error
 		if err != nil {
 			if errors.Is(err, gorm.ErrRecordNotFound) {
-				response.Info = append(response.Info,
-					"The user name does not exist or the password is incorrect.")
+				logger.Errorln(fmt.
+					Errorf("The user name does not exist or the password is incorrect"))
 			} else {
-				response.Info = append(response.Info, config.INTERNAL_ERROR)
 				logger.Errorln(err)
 			}
 		} else {
 			configs := []string{"MaxSeekHelpPerDay", "LoginDuration"}
-			for i, v := range configs {
+			for _, v := range configs {
 				result, err := RDB.Get(context.Background(), v).Result()
 				if err != nil {
 					logger.Errorln(err)
-					response.Info = append(response.Info, config.INTERNAL_ERROR)
 					break
 				}
 				num, err := strconv.Atoi(result)
 				if err != nil {
 					logger.Errorln(err)
-					response.Info = append(response.Info, config.INTERNAL_ERROR)
 					break
 				}
 				response.ConfigData = append(response.ConfigData, num)
-				if i+1 == len(configs) {
-					response.Status = config.RETURN_SUCCEED
-				}
+			}
+			err = DB.Model(&db.SeekHelp{}).Where(&db.SeekHelp{Status: 0}).
+				Limit(50).Find(&response.UnsolvedList).Error
+			if err != nil {
+				logger.Errorln(err)
+			} else {
+				response.Status = config.RETURN_SUCCEED
 			}
 		}
 		c.JSON(http.StatusOK, response)
-		return
 	} else if info[0] == "register" {
 
 	} else if info[0] == "retrievePassword" {
 
 	}
-	c.JSON(http.StatusOK, response)
 }
 
 // {"seekHelp",date}
@@ -142,30 +252,25 @@ func requestList(info []string, c *gin.Context) {
 		var response struct {
 			Status      string       `json:"status"`
 			CommentList []db.Comment `json:"commentList"`
-			Info        []string     `json:"info"`
 		}
 		response.Status = config.RETURN_FAIL
 		response.CommentList = make([]db.Comment, 0)
-		response.Info = make([]string, 0)
 		helpType, err := strconv.Atoi(info[1])
 		if err != nil {
-			response.Info = append(response.Info, config.INTERNAL_ERROR)
 			logger.Errorln(err)
 			c.JSON(http.StatusOK, response)
 			return
 		}
-		helpId, err := strconv.Atoi(info[2])
+		seekOrLendId, err := strconv.Atoi(info[2])
 		if err != nil {
-			response.Info = append(response.Info, config.INTERNAL_ERROR)
 			logger.Errorln(err)
 			c.JSON(http.StatusOK, response)
 			return
 		}
 		err = DB.Model(&db.Comment{}).
-			Where(&db.Comment{Type: helpType, HelpId: helpId}).
+			Where(&db.Comment{Type: helpType, SeekOrLendId: seekOrLendId}).
 			Find(&response.CommentList).Error
 		if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
-			response.Info = append(response.Info, config.INTERNAL_ERROR)
 			logger.Errorln(err)
 		} else {
 			response.Status = config.RETURN_SUCCEED
