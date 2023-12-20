@@ -7,6 +7,7 @@ import (
 	"mime/multipart"
 	"net/http"
 	"os"
+	"os/exec"
 	"strconv"
 	"strings"
 
@@ -84,11 +85,24 @@ func lendAHand(c *gin.Context) {
 		c.JSON(http.StatusOK, response)
 		return
 	}
-	// TODO 应该调用diff -U NUM origin.txt copyId.txt > diffId.txt
+	// diff -U NUM origin.txt copyId.txt > diffId.txt
 	codeFilePath := config.USER_UPLOAD_FOLDER + paramValues[3] + "/" +
 		strconv.Itoa(seekHelpCount) + "/" + "copy" +
 		strconv.Itoa(int(lendHandCount)) + ".txt"
 	err = SaveAFile(codeFilePath, files[0])
+	if err != nil {
+		logger.Errorln(err)
+		c.JSON(http.StatusOK, response)
+		return
+	}
+	originFilePath := config.USER_UPLOAD_FOLDER + paramValues[3] + "/" +
+		strconv.Itoa(seekHelpCount) + "/" + "origin.txt"
+	diffFilePath := config.USER_UPLOAD_FOLDER + paramValues[3] + "/" +
+		strconv.Itoa(seekHelpCount) + "/" + "diff" +
+		strconv.Itoa(int(lendHandCount)) + ".txt"
+	cmd := exec.Command("diff", "-U", "9999", originFilePath, codeFilePath, ">", diffFilePath)
+	// 这里是同步，有点耗时间，可以考虑Start和Wait的异步结合
+	err = cmd.Run()
 	if err != nil {
 		logger.Errorln(err)
 		c.JSON(http.StatusOK, response)
@@ -130,6 +144,7 @@ func lendAHand(c *gin.Context) {
 			UploadTime:     paramValues[5],
 			Remark:         paramValues[0],
 			CodePath:       codeFilePath,
+			DiffPath:       diffFilePath,
 			MaxComment:     websiteConfig[0],
 			Ban:            websiteConfig[1],
 		}

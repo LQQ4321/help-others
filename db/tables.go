@@ -63,6 +63,7 @@ type LendHand struct {
 	UploadTime     string //发布时间
 	Remark         string //附带的解释信息
 	CodePath       string //代码地址
+	DiffPath       string //diff文件地址
 	MaxComment     int    //最大评论数量
 	Like           int    //点赞数
 	Ban            int    //该条帮助的权限

@@ -1,5 +1,5 @@
 #!/bin/bash
-
+set -e
 # network
 # docker network create -d bridge help_others_network
 
@@ -24,5 +24,5 @@ docker build -t help-others-image -f ./assets/Dockerfile.server .
 
 docker run -d --name help-others-container --network help_others_network \
     -p 80:80 --shm-size=256m --restart=always \
-    -v /usr/local/docker/help-others/data/files:/go/server/files \
+    -v /usr/local/docker/help-others/data/files:/opt/files \
     help-others-image

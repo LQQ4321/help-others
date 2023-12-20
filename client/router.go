@@ -26,7 +26,11 @@ func init() {
 	router.MaxMultipartMemory = 8 << 20 //8MB
 
 	// 定义静态文件路由
-	router.Static("/", "./assets/web")
+	// TODO flutter build 有些组件显示错误，与flutter run不同
+	// 猜测一：router.Static的问题
+	// 猜测二：flutter build的问题
+	// 个人感觉偏向后者
+	router.Static("/", "./assets/web/index.html")
 
 	router.POST("/requestJson", jsonRequest)
 	router.POST("/requestForm", formRequest)

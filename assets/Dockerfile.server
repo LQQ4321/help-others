@@ -1,17 +1,27 @@
-FROM golang:latest
+FROM golang:1.20 AS build
 
 WORKDIR /go/server
 
 COPY go.mod go.sum /go/server/
 
 # 获取依赖的包
-RUN go env -w GOPROXY=https://goproxy.cn,direct \
-    && go mod download -x
+RUN go env -w GOPROXY=https://goproxy.cn,direct && go mod download -x
 
 # 复制项目代码
 COPY ./ /go/server
 
 RUN go build -o help-others .
 
-ENTRYPOINT ["/go/server/help-others"]
+FROM debian:latest
+
+WORKDIR /opt
+
+COPY ./assets/web /opt/assets/web
+
+# 注意files和help-others是go build构建出来的
+COPY --from=build /go/server/files /opt/files
+
+COPY --from=build /go/server/help-others /opt
+
+ENTRYPOINT ["./help-others"]
 # 构建出来的容器太大了，应该只保留最后编译出来的程序

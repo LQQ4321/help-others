@@ -1,4 +1,5 @@
 #!/bin/bash
+set -e
 
 chmod u+x ./restart.sh
 docker stop help-others-container

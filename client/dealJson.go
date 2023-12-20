@@ -13,6 +13,48 @@ import (
 	"gorm.io/gorm"
 )
 
+// {type,seekOrLendId,text,sendTime,publisher,publisherId}
+func sendAComment(info []string, c *gin.Context) {
+	var response struct {
+		Status  string     `json:"status"`
+		Comment db.Comment `json:"comment"`
+	}
+	response.Status = config.RETURN_SUCCEED
+	sendType, err := strconv.Atoi(info[0])
+	if err != nil {
+		logger.Errorln(err)
+		c.JSON(http.StatusOK, response)
+		return
+	}
+	seekOrLendId, err := strconv.Atoi(info[1])
+	if err != nil {
+		logger.Errorln(err)
+		c.JSON(http.StatusOK, response)
+		return
+	}
+	publisherId, err := strconv.Atoi(info[5])
+	if err != nil {
+		logger.Errorln(err)
+		c.JSON(http.StatusOK, response)
+		return
+	}
+	response.Comment = db.Comment{
+		Text:         info[2],
+		SendTime:     info[3],
+		Type:         sendType,
+		SeekOrLendId: seekOrLendId,
+		Publisher:    info[4],
+		PublisherId:  publisherId,
+	}
+	err = DB.Model(&db.Comment{}).Create(&response.Comment).Error
+	if err != nil {
+		logger.Errorln(err)
+	} else {
+		response.Status = config.RETURN_SUCCEED
+	}
+	c.JSON(http.StatusOK, response)
+}
+
 // 点赞后不能取消
 // {seekHelp,seekHelpId,userId} 前端负责检验seekHelperId和userId是不是同一个人
 // {lendHand,lendHandId,userId} 前后端一起负责检验seekHelperId和userId是不是同一个人(防止数据不同步)
@@ -173,7 +215,7 @@ func verifyUser(info []string, c *gin.Context) {
 				}
 				response.ConfigData = append(response.ConfigData, num)
 			}
-			err = DB.Model(&db.SeekHelp{}).Where(&db.SeekHelp{Status: 0}).
+			err = DB.Model(&db.SeekHelp{}).Where("status = ?", 0).
 				Limit(50).Find(&response.UnsolvedList).Error
 			if err != nil {
 				logger.Errorln(err)
@@ -268,7 +310,7 @@ func requestList(info []string, c *gin.Context) {
 			return
 		}
 		err = DB.Model(&db.Comment{}).
-			Where(&db.Comment{Type: helpType, SeekOrLendId: seekOrLendId}).
+			Where("type = ? AND seek_or_lend_id = ?", helpType, seekOrLendId).
 			Find(&response.CommentList).Error
 		if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
 			logger.Errorln(err)
@@ -319,7 +361,7 @@ func requestShowDataOne(info []string, c *gin.Context) {
 			if err != nil {
 				logger.Errorln(err)
 			} else {
-				response.CodePath = lendHand.CodePath
+				response.CodePath = lendHand.DiffPath
 				response.Remark = lendHand.Remark
 				response.Status = config.RETURN_SUCCEED
 			}
