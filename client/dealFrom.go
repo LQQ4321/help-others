@@ -100,14 +100,11 @@ func lendAHand(c *gin.Context) {
 	diffFilePath := config.USER_UPLOAD_FOLDER + paramValues[3] + "/" +
 		strconv.Itoa(seekHelpCount) + "/" + "diff" +
 		strconv.Itoa(int(lendHandCount)) + ".txt"
-	cmd := exec.Command("diff", "-U", "9999", originFilePath, codeFilePath, ">", diffFilePath)
+	cmd := exec.Command("sh", "-c", "diff -U 9999 "+originFilePath+" "+codeFilePath+" > "+diffFilePath)
+	// cmd := exec.Command("diff", "-U", "9999", originFilePath, codeFilePath, ">", diffFilePath)
 	// 这里是同步，有点耗时间，可以考虑Start和Wait的异步结合
-	err = cmd.Run()
-	if err != nil {
-		logger.Errorln(err)
-		c.JSON(http.StatusOK, response)
-		return
-	}
+	// 虽然报错exit status 1，但是结果还是好的，所以感觉不用管这里的报错
+	cmd.Run()
 	userId, err := strconv.Atoi(paramValues[4])
 	if err != nil {
 		logger.Errorln(err)

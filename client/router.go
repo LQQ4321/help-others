@@ -30,7 +30,7 @@ func init() {
 	// 猜测一：router.Static的问题
 	// 猜测二：flutter build的问题
 	// 个人感觉偏向后者
-	router.Static("/", "./assets/web/index.html")
+	router.Static("/", "./assets/web")
 
 	router.POST("/requestJson", jsonRequest)
 	router.POST("/requestForm", formRequest)
