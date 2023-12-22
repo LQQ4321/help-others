@@ -3,6 +3,7 @@ package db
 import (
 	"context"
 	"errors"
+	"math/rand"
 
 	"github.com/LQQ4321/help-others/config"
 	"github.com/redis/go-redis/v9"
@@ -74,4 +75,16 @@ func MysqlInit(loggerInstance *zap.Logger) {
 		}
 	}
 	logger.Sugar().Infoln("help-others-redis init succeed !")
+}
+
+func GenerateRandomString(length int) string {
+	charset := "0123456789"
+	charsetLength := len(charset)
+
+	randomString := make([]byte, length)
+	for i := 0; i < length; i++ {
+		randomString[i] = charset[rand.Intn(charsetLength)]
+	}
+
+	return string(randomString)
 }

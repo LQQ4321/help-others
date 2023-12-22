@@ -27,12 +27,15 @@ func ClientInit(loggerInstance *zap.SugaredLogger) {
 	logger = loggerInstance
 	jsonFuncMap = make(map[string]jsonFunc)
 	jsonFuncMap = map[string]jsonFunc{
-		"verifyUser":         verifyUser, //verifyUser
-		"requestList":        requestList,
-		"requestShowDataOne": requestShowDataOne,
-		"downloadFile":       downloadFile,
-		"likeOperate":        likeOperate,
-		"sendAComment":       sendAComment,
+		"sendVerificationCode": sendVerificationCode,
+		"login":                login,
+		"register":             register,
+		"forgotPassword":       forgotPassword,
+		"requestList":          requestList,
+		"requestShowDataOne":   requestShowDataOne,
+		"downloadFile":         downloadFile,
+		"likeOperate":          likeOperate,
+		"sendAComment":         sendAComment,
 	}
 	formFuncMap = make(map[string]formFunc)
 	formFuncMap = map[string]formFunc{

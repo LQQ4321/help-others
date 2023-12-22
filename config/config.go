@@ -40,6 +40,16 @@ var (
 	}
 )
 
+// Sender mailbox
+// Verification code
+const (
+	SENDER_MAILBOX                = "help-others@qq.com"
+	SMTP_SERVER_PATH              = "smtp.qq.com"
+	SMTP_SERVER_PORT              = ":25"
+	SMTP_SERVER_VERIFICATION_CODE = "tbcafkkojvhoddba"
+	VERIFICATION_CODE_VAILD_TIME  = 10
+)
+
 var (
 	Language = map[string]string{
 		"c":   "C",

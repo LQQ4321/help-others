@@ -24,8 +24,9 @@ package db
 
 type User struct {
 	ID               int    `gorm:"primaryKey"`
-	Name             string //用户名
+	Name             string //用户名，唯一
 	Password         string //登录密码
+	Mailbox          string //邮箱地址,唯一
 	IsManager        bool   //是否是管理员
 	SeekHelp         string //求助他人的列表
 	LendHand         string //帮助他人的列表(每个人对于一次求助只能发布一份代码)
