@@ -3,7 +3,6 @@ package client
 import (
 	"context"
 	"errors"
-	"fmt"
 	"net/http"
 	"net/smtp"
 	"strconv"
@@ -78,36 +77,57 @@ func sendCodeToUser(receivingMailbox, verificationPassword string) error {
 
 // {"username",name,password}
 // {"mailbox","mailbox path","password"}
+// {authcode,mailbox path,auth code}
 func login(info []string, c *gin.Context) {
 	var response struct {
 		Status       string        `json:"status"`
 		ConfigData   []int         `json:"configData"`
 		User         db.User       `json:"user"`
 		UnsolvedList []db.SeekHelp `json:"unsolvedList"`
-		ErrorCode    int           `json:"errorCode"`
+		// 1 内部错误 2 验证码过期 3 验证码或密码错误 4 邮箱地址或者用户名不存在
+		ErrorCode int `json:"errorCode"`
 	}
 	response.Status = config.RETURN_FAIL
 	response.ConfigData = make([]int, 0)
 	response.UnsolvedList = make([]db.SeekHelp, 0)
+	response.ErrorCode = 1
+	flag := false
 	var err error
 	if info[0] == "username" {
-		err = DB.Model(&db.User{}).
-			Where(&db.User{Name: info[1], Password: info[2]}).
+		err = DB.Model(&db.User{}).Where(&db.User{Name: info[1]}).
 			First(&response.User).Error
 	} else {
-		err = DB.Model(&db.User{}).
-			Where(&db.User{Mailbox: info[1], Password: info[2]}).
+		err = DB.Model(&db.User{}).Where(&db.User{Mailbox: info[1]}).
 			First(&response.User).Error
 	}
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			logger.Errorln(fmt.
-				Errorf("The username or mailbox does not exist or the password is incorrect"))
+			response.ErrorCode = 4
 		} else {
 			logger.Errorln(err)
 		}
 	} else {
-		flag := false
+		if info[0] == "authcode" {
+			val, err := RDB.Get(context.Background(), info[1]).Result()
+			if err == redis.Nil {
+				response.ErrorCode = 2
+			} else if err != nil {
+				logger.Errorln(err)
+			} else if val != info[2] {
+				response.ErrorCode = 3
+			} else {
+				flag = true
+			}
+		} else {
+			if response.User.Password != info[2] {
+				response.ErrorCode = 3
+			} else {
+				flag = true
+			}
+		}
+	}
+	if flag {
+		flag = false
 		configs := []string{"MaxSeekHelpPerDay", "LoginDuration"}
 		for i, v := range configs {
 			result, err := RDB.Get(context.Background(), v).Result()
@@ -126,7 +146,7 @@ func login(info []string, c *gin.Context) {
 			}
 		}
 		if flag {
-			err = DB.Model(&db.SeekHelp{}).Where("status = ?", 0).
+			err := DB.Model(&db.SeekHelp{}).Where("status = ?", 0).
 				Limit(50).Find(&response.UnsolvedList).Error
 			if err != nil {
 				logger.Errorln(err)
