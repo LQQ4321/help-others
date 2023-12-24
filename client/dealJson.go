@@ -34,7 +34,7 @@ func sendVerificationCode(info []string, c *gin.Context) {
 	var count int64
 	err := DB.Model(&db.User{}).Where(&db.User{Mailbox: info[1]}).
 		Count(&count).Error
-	if !errors.Is(err, gorm.ErrRecordNotFound) {
+	if !errors.Is(err, gorm.ErrRecordNotFound) && err != nil {
 		logger.Errorln(err)
 	} else if info[0] == "register" && count > 0 {
 		response.ErrorCode = 2
@@ -179,7 +179,7 @@ func forgotPassword(info []string, c *gin.Context) {
 		var count int64
 		err = DB.Model(&db.User{}).
 			Where(&db.User{Mailbox: info[0]}).Count(&count).Error
-		if !errors.Is(err, gorm.ErrRecordNotFound) {
+		if !errors.Is(err, gorm.ErrRecordNotFound) && err != nil {
 			logger.Errorln(err)
 		} else if count <= 0 {
 			response.ErrorCode = 4
@@ -219,7 +219,7 @@ func register(info []string, c *gin.Context) {
 		var count int64
 		err = DB.Model(&db.User{}).Where(&db.User{Name: info[0]}).
 			Or(&db.User{Mailbox: info[1]}).Count(&count).Error
-		if !errors.Is(err, gorm.ErrRecordNotFound) {
+		if !errors.Is(err, gorm.ErrRecordNotFound) && err != nil {
 			logger.Errorln(err)
 		} else if count > 0 {
 			response.ErrorCode = 4
