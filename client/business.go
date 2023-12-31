@@ -31,6 +31,7 @@ func ClientInit(loggerInstance *zap.SugaredLogger) {
 		"login":                login,
 		"register":             register,
 		"forgotPassword":       forgotPassword,
+		"getContributions":     getContributions,
 		"requestList":          requestList,
 		"requestShowDataOne":   requestShowDataOne,
 		"downloadFile":         downloadFile,

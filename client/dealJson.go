@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"net/smtp"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/LQQ4321/help-others/config"
@@ -26,34 +27,42 @@ import (
 // {forgotPassword,mailbox}
 func sendVerificationCode(info []string, c *gin.Context) {
 	var response struct {
-		Status    string `json:"status"`
-		ErrorCode int    `json:"errorCode"` // 1内部错误 2邮箱已存在(想对于注册) 3 邮箱不存在(相对于忘记密码)
+		Status string `json:"status"`
+		// 1内部错误 2邮箱已存在(想对于注册) 3邮箱不存在(相对于忘记密码) 4太频繁的请求
+		ErrorCode int `json:"errorCode"`
 	}
 	response.Status = config.RETURN_FAIL
 	response.ErrorCode = 1
-	var count int64
-	err := DB.Model(&db.User{}).Where(&db.User{Mailbox: info[1]}).
-		Count(&count).Error
-	if !errors.Is(err, gorm.ErrRecordNotFound) && err != nil {
-		logger.Errorln(err)
-	} else if info[0] == "register" && count > 0 {
-		response.ErrorCode = 2
-	} else if info[0] == "forgotPassword" && count <= 0 {
-		response.ErrorCode = 3
-	} else {
-		verificationPassword := db.GenerateRandomString(6)
-		_, err = RDB.Set(context.Background(), info[1], verificationPassword,
-			time.Minute*config.VERIFICATION_CODE_VAILD_TIME).Result()
-		if err != nil {
+	_, err := RDB.Get(context.Background(), info[1]).Result()
+	if err == redis.Nil {
+		var count int64
+		err = DB.Model(&db.User{}).Where(&db.User{Mailbox: info[1]}).
+			Count(&count).Error
+		if !errors.Is(err, gorm.ErrRecordNotFound) && err != nil {
 			logger.Errorln(err)
+		} else if info[0] == "register" && count > 0 {
+			response.ErrorCode = 2
+		} else if info[0] == "forgotPassword" && count <= 0 {
+			response.ErrorCode = 3
 		} else {
+			verificationPassword := db.GenerateRandomString(6)
 			err = sendCodeToUser(info[1], verificationPassword)
 			if err != nil {
 				logger.Errorln(err)
 			} else {
-				response.Status = config.RETURN_SUCCEED
+				_, err = RDB.Set(context.Background(), info[1], verificationPassword,
+					time.Minute*config.VERIFICATION_CODE_VAILD_TIME).Result()
+				if err != nil {
+					logger.Errorln(err)
+				} else {
+					response.Status = config.RETURN_SUCCEED
+				}
 			}
 		}
+	} else if err != nil {
+		logger.Errorln(err)
+	} else {
+		response.ErrorCode = 4
 	}
 	c.JSON(http.StatusOK, response)
 }
@@ -151,6 +160,8 @@ func login(info []string, c *gin.Context) {
 			if err != nil {
 				logger.Errorln(err)
 			} else {
+				response.User.SeekHelp = ""
+				response.User.LendHand = ""
 				response.Status = config.RETURN_SUCCEED
 			}
 		}
@@ -198,7 +209,7 @@ func forgotPassword(info []string, c *gin.Context) {
 }
 
 // 注册账户
-// {name,mailbox,password,verificationPassword}
+// {name,mailbox,password,verificationPassword,registerTime}
 func register(info []string, c *gin.Context) {
 	var response struct {
 		Status    string  `json:"status"`
@@ -229,8 +240,9 @@ func register(info []string, c *gin.Context) {
 				Mailbox:  info[1],
 				Password: info[2],
 				// TODO fixme 应该从redis中动态获取，而不是从配置文件中静态获取
-				Ban:   config.WebsiteConfig["UserBan"],
-				Score: config.WebsiteConfig["InitScore"],
+				Ban:          config.WebsiteConfig["UserBan"],
+				Score:        config.WebsiteConfig["InitScore"],
+				RegisterTime: info[4],
 			}
 			err = DB.Model(&db.User{}).Create(&response.User).Error
 			if err != nil {
@@ -281,6 +293,82 @@ func sendAComment(info []string, c *gin.Context) {
 		logger.Errorln(err)
 	} else {
 		response.Status = config.RETURN_SUCCEED
+	}
+	c.JSON(http.StatusOK, response)
+}
+
+// {userId}
+func getContributions(info []string, c *gin.Context) {
+	var response struct {
+		Status           string   `json:"status"`
+		SeekHelpTimeList []string `json:"seekHelpTimeList"`
+		LendHandTimeList []string `json:"lendHandTimeList"`
+	}
+	response.Status = config.RETURN_FAIL
+	response.SeekHelpTimeList = make([]string, 0)
+	response.LendHandTimeList = make([]string, 0)
+	userId, err := strconv.Atoi(info[0])
+	if err != nil {
+		logger.Errorln(err)
+	} else {
+		user := db.User{}
+		err = DB.Model(&db.User{}).
+			Where(&db.User{ID: userId}).First(&user).Error
+		if err != nil {
+			logger.Errorln(err)
+		} else {
+			if len(user.SeekHelp) > 0 {
+				seekHelpList := strings.Split(user.SeekHelp, "#")
+				list := []int{}
+				for _, v := range seekHelpList {
+					num, err := strconv.Atoi(v)
+					if err != nil {
+						logger.Errorln(err)
+						c.JSON(http.StatusOK, response)
+						return
+					}
+					list = append(list, num)
+				}
+				seekHelps := []db.SeekHelp{}
+				err = DB.Model(&db.SeekHelp{}).Where(list).
+					Select("upload_time").Find(&seekHelps).Error
+				if err != nil {
+					logger.Errorln(err)
+					c.JSON(http.StatusOK, response)
+					return
+				} else {
+					for _, v := range seekHelps {
+						response.SeekHelpTimeList = append(response.SeekHelpTimeList, v.UploadTime)
+					}
+				}
+			}
+			if len(user.LendHand) > 0 {
+				lendHandList := strings.Split(user.LendHand, "#")
+				list := []int{}
+				for _, v := range lendHandList {
+					num, err := strconv.Atoi(v)
+					if err != nil {
+						logger.Errorln(err)
+						c.JSON(http.StatusOK, response)
+						return
+					}
+					list = append(list, num)
+				}
+				lendHands := []db.LendHand{}
+				err = DB.Model(&db.LendHand{}).Where(list).
+					Select("upload_time").Find(&lendHands).Error
+				if err != nil {
+					logger.Errorln(err)
+					c.JSON(http.StatusOK, response)
+					return
+				} else {
+					for _, v := range lendHands {
+						response.LendHandTimeList = append(response.LendHandTimeList, v.UploadTime)
+					}
+				}
+			}
+			response.Status = config.RETURN_SUCCEED
+		}
 	}
 	c.JSON(http.StatusOK, response)
 }

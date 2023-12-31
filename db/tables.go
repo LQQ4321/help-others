@@ -34,6 +34,7 @@ type User struct {
 	LendHandLikeList string //点赞过的求助列表
 	Ban              int    //用户权限
 	Score            int    //当前用户拥有的分值，初始是 3，分值为零时不允许发布求助
+	RegisterTime     string //注册时间
 }
 
 // 求助
