@@ -300,13 +300,13 @@ func sendAComment(info []string, c *gin.Context) {
 // {userId}
 func getContributions(info []string, c *gin.Context) {
 	var response struct {
-		Status           string   `json:"status"`
-		SeekHelpTimeList []string `json:"seekHelpTimeList"`
-		LendHandTimeList []string `json:"lendHandTimeList"`
+		Status       string        `json:"status"`
+		SeekHelpList []db.SeekHelp `json:"seekHelpList"`
+		LendHandList []db.LendHand `json:"lendHandList"`
 	}
 	response.Status = config.RETURN_FAIL
-	response.SeekHelpTimeList = make([]string, 0)
-	response.LendHandTimeList = make([]string, 0)
+	response.SeekHelpList = make([]db.SeekHelp, 0)
+	response.LendHandList = make([]db.LendHand, 0)
 	userId, err := strconv.Atoi(info[0])
 	if err != nil {
 		logger.Errorln(err)
@@ -329,17 +329,13 @@ func getContributions(info []string, c *gin.Context) {
 					}
 					list = append(list, num)
 				}
-				seekHelps := []db.SeekHelp{}
 				err = DB.Model(&db.SeekHelp{}).Where(list).
-					Select("upload_time").Find(&seekHelps).Error
+					Select([]string{"id", "upload_time", "language", "score", "like", "status"}).
+					Find(&response.SeekHelpList).Error
 				if err != nil {
 					logger.Errorln(err)
 					c.JSON(http.StatusOK, response)
 					return
-				} else {
-					for _, v := range seekHelps {
-						response.SeekHelpTimeList = append(response.SeekHelpTimeList, v.UploadTime)
-					}
 				}
 			}
 			if len(user.LendHand) > 0 {
@@ -354,17 +350,13 @@ func getContributions(info []string, c *gin.Context) {
 					}
 					list = append(list, num)
 				}
-				lendHands := []db.LendHand{}
 				err = DB.Model(&db.LendHand{}).Where(list).
-					Select("upload_time").Find(&lendHands).Error
+					Select([]string{"id", "seek_help_id", "upload_time", "like", "status"}).
+					Find(&response.LendHandList).Error
 				if err != nil {
 					logger.Errorln(err)
 					c.JSON(http.StatusOK, response)
 					return
-				} else {
-					for _, v := range lendHands {
-						response.LendHandTimeList = append(response.LendHandTimeList, v.UploadTime)
-					}
 				}
 			}
 			response.Status = config.RETURN_SUCCEED
