@@ -41,7 +41,24 @@ func MysqlInit(loggerInstance *zap.Logger) {
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			err = DB.Model(&User{}).
-				Create(&User{Name: "root", Password: "root", IsManager: true}).Error
+				Create(&User{
+					Name:         "root",
+					Password:     "root",
+					IsManager:    true,
+					Score:        100,
+					RegisterTime: "2023-10-10",
+					Mailbox:      "2754294621@qq.com"}).Error
+			if err != nil {
+				logger.Fatal("create manager role fail : ", zap.Error(err))
+			}
+			err = DB.Model(&User{}).
+				Create(&User{
+					Name:         "lqq",
+					Password:     "lqq",
+					IsManager:    false,
+					Score:        100,
+					RegisterTime: "2023-10-10",
+					Mailbox:      "2754294622@qq.com"}).Error
 			if err != nil {
 				logger.Fatal("create manager role fail : ", zap.Error(err))
 			}

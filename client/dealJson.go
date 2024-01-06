@@ -300,13 +300,15 @@ func sendAComment(info []string, c *gin.Context) {
 // {userId}
 func getContributions(info []string, c *gin.Context) {
 	var response struct {
-		Status       string        `json:"status"`
-		SeekHelpList []db.SeekHelp `json:"seekHelpList"`
-		LendHandList []db.LendHand `json:"lendHandList"`
+		Status        string        `json:"status"`
+		SeekHelpList  []db.SeekHelp `json:"seekHelpList"`
+		LendHandList  []db.LendHand `json:"lendHandList"`
+		SeekHelpList2 []db.SeekHelp `json:"seekHelpList2"`
 	}
 	response.Status = config.RETURN_FAIL
 	response.SeekHelpList = make([]db.SeekHelp, 0)
 	response.LendHandList = make([]db.LendHand, 0)
+	response.SeekHelpList2 = make([]db.SeekHelp, 0)
 	userId, err := strconv.Atoi(info[0])
 	if err != nil {
 		logger.Errorln(err)
@@ -330,7 +332,8 @@ func getContributions(info []string, c *gin.Context) {
 					list = append(list, num)
 				}
 				err = DB.Model(&db.SeekHelp{}).Where(list).
-					Select([]string{"id", "upload_time", "language", "score", "like", "status"}).
+					Select([]string{"id", "seek_helper_id", "seek_helper_name",
+						"upload_time", "language", "score", "like", "status"}).
 					Find(&response.SeekHelpList).Error
 				if err != nil {
 					logger.Errorln(err)
@@ -351,8 +354,24 @@ func getContributions(info []string, c *gin.Context) {
 					list = append(list, num)
 				}
 				err = DB.Model(&db.LendHand{}).Where(list).
-					Select([]string{"id", "seek_help_id", "upload_time", "like", "status"}).
+					Select([]string{"id", "seek_help_id", "lend_hander_id",
+						"lend_hander_name", "upload_time", "like", "status"}).
 					Find(&response.LendHandList).Error
+				if err != nil {
+					logger.Errorln(err)
+					c.JSON(http.StatusOK, response)
+					return
+				}
+			}
+			list := []int{}
+			for _, v := range response.LendHandList {
+				list = append(list, v.SeekHelpId)
+			}
+			if len(list) > 0 {
+				err = DB.Model(&db.SeekHelp{}).Where(list).
+					Select([]string{"id", "seek_helper_id", "seek_helper_name",
+						"upload_time", "language", "score", "like", "status"}).
+					Find(&response.SeekHelpList2).Error
 				if err != nil {
 					logger.Errorln(err)
 					c.JSON(http.StatusOK, response)
