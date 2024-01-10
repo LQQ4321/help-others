@@ -130,7 +130,7 @@ func lendAHand(c *gin.Context) {
 	}
 	err = DB.Transaction(func(tx *gorm.DB) error {
 		user := db.User{}
-		err := tx.Model(&db.User{ID: userId}).First(&user).Error
+		err := tx.Model(&db.User{}).Where(&db.User{ID: userId}).First(&user).Error
 		if err != nil {
 			return err
 		}

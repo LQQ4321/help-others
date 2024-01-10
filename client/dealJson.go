@@ -137,7 +137,7 @@ func login(info []string, c *gin.Context) {
 	}
 	if flag {
 		flag = false
-		configs := []string{"MaxSeekHelpPerDay", "LoginDuration"}
+		configs := []string{"LoginDuration", "MaxUploadFileSize", "MaxUploadImageSize"}
 		for i, v := range configs {
 			result, err := RDB.Get(context.Background(), v).Result()
 			if err != nil {
@@ -645,27 +645,3 @@ func requestShowDataOne(info []string, c *gin.Context) {
 	}
 	c.JSON(http.StatusOK, response)
 }
-
-// {"seekHelp",seekHelpId}
-// {"lendHand",lendHandId}
-// func requestShowData(info []string, c *gin.Context) {
-// 	if info[0] == "seekHelp" {
-// 		seekHelpId, err := strconv.Atoi(info[1])
-// 		if err != nil {
-// 			logger.Errorln(err)
-// 		}
-// 	} else if info[0] == "lendHand" {
-
-// 	}
-// }
-
-// 删除一条求助信息，和该条求助信息有关的所有数据都会被删除
-// 为了保证数据同步，最好前端若干次操作后进行一次网络请求(寻找一个平衡点)
-// TODO 等到项目上线的时候，浏览器的同源策略保证请求是manager调用的，就不需要认证了
-// {seekHelpId}
-// func deleteASeekHelp(info []string, c *gin.Context) {
-// 	var response struct {
-// 		Status string `json:"status"`
-// 	}
-
-// }
