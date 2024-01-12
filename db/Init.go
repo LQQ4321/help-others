@@ -2,7 +2,6 @@ package db
 
 import (
 	"context"
-	"errors"
 	"math/rand"
 
 	"github.com/LQQ4321/help-others/config"
@@ -36,35 +35,6 @@ func MysqlInit(loggerInstance *zap.Logger) {
 	err = DB.AutoMigrate(&User{}, &SeekHelp{}, &LendHand{}, &Comment{})
 	if err != nil {
 		logger.Fatal("create tables fail : ", zap.Error(err))
-	}
-	err = DB.Model(&User{}).Where(&User{IsManager: true}).First(&User{}).Error
-	if err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			err = DB.Model(&User{}).
-				Create(&User{
-					Name:         "root",
-					Password:     "root",
-					IsManager:    true,
-					Score:        100,
-					RegisterTime: "2023-10-10",
-					Mailbox:      "2754294621@qq.com"}).Error
-			if err != nil {
-				logger.Fatal("create manager role fail : ", zap.Error(err))
-			}
-			err = DB.Model(&User{}).
-				Create(&User{
-					Name:         "lqq",
-					Password:     "lqq",
-					IsManager:    false,
-					Score:        100,
-					RegisterTime: "2023-10-10",
-					Mailbox:      "2754294622@qq.com"}).Error
-			if err != nil {
-				logger.Fatal("create manager role fail : ", zap.Error(err))
-			}
-		} else {
-			logger.Fatal("create manager role fail : ", zap.Error(err))
-		}
 	}
 	logger.Sugar().Infoln("help-others-mysql init succeed !")
 

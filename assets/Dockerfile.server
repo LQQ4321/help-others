@@ -18,6 +18,8 @@ WORKDIR /opt
 
 COPY ./assets/web /opt/assets/web
 
+COPY ./assets/ca-certificates.crt /etc/ssl/certs/ca-certificates.crt
+
 # 注意files和help-others是go build构建出来的
 COPY --from=build /go/server/files /opt/files
 

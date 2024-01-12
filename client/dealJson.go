@@ -2,7 +2,9 @@ package client
 
 import (
 	"context"
+	"crypto/tls"
 	"errors"
+	"fmt"
 	"net/http"
 	"net/smtp"
 	"strconv"
@@ -12,7 +14,6 @@ import (
 	"github.com/LQQ4321/help-others/config"
 	"github.com/LQQ4321/help-others/db"
 	"github.com/gin-gonic/gin"
-	"github.com/jordan-wright/email"
 	"github.com/redis/go-redis/v9"
 	"gorm.io/gorm"
 )
@@ -68,20 +69,139 @@ func sendVerificationCode(info []string, c *gin.Context) {
 }
 
 // 向指定邮箱发送验证码
+// func sendCodeToUser(receivingMailbox, verificationPassword string) error {
+// 	e := email.NewEmail()
+// 	//设置发送方的邮箱
+// 	e.From = config.SENDER_MAILBOX
+// 	// 设置接收方的邮箱（这里是一个字符串数组，什么是可以群发的）
+// 	e.To = []string{receivingMailbox}
+// 	//设置主题
+// 	e.Subject = "You have been received a verification password from help-others"
+// 	//设置文件发送的内容
+// 	e.Text = []byte(verificationPassword)
+// 	//设置服务器相关的配置
+// 	// ""，账号密码，授权码，""
+
+// 	return e.Send(config.SMTP_SERVER_PATH+config.SMTP_SERVER_PORT, smtp.PlainAuth("",
+// 		config.SENDER_MAILBOX, config.SMTP_SERVER_VERIFICATION_CODE, config.SMTP_SERVER_PATH))
+// }
+
 func sendCodeToUser(receivingMailbox, verificationPassword string) error {
-	e := email.NewEmail()
-	//设置发送方的邮箱
-	e.From = config.SENDER_MAILBOX
-	// 设置接收方的邮箱（这里是一个字符串数组，什么是可以群发的）
-	e.To = []string{receivingMailbox}
-	//设置主题
-	e.Subject = "You have been received a verification password from help-others"
-	//设置文件发送的内容
-	e.Text = []byte(verificationPassword)
-	//设置服务器相关的配置
-	// ""，账号密码，授权码，""
-	return e.Send(config.SMTP_SERVER_PATH+config.SMTP_SERVER_PORT, smtp.PlainAuth("",
-		config.SENDER_MAILBOX, config.SMTP_SERVER_VERIFICATION_CODE, config.SMTP_SERVER_PATH))
+	// 邮件服务器配置
+	smtpHost := config.SMTP_SERVER_PATH
+	smtpPort := config.SMTP_SERVER_PORT
+	email := config.SENDER_MAILBOX
+	password := config.SMTP_SERVER_VERIFICATION_CODE
+	// 收件人邮箱
+	to := []string{receivingMailbox}
+	// 邮件内容
+	subject := "You have been received a verification password from help-others"
+	body := verificationPassword
+	// 创建认证信息
+	auth := smtp.PlainAuth("", email, password, smtpHost)
+	// 创建邮件内容
+	msg := []byte("To: " + to[0] + "\r\n" +
+		"Subject: " + subject + "\r\n" +
+		"\r\n" +
+		body + "\r\n")
+	// 配置 TLS
+	tlsConfig := &tls.Config{
+		InsecureSkipVerify: true,
+		ServerName:         smtpHost,
+	}
+	// 连接到邮件服务器
+	conn, err := tls.Dial("tcp", fmt.Sprintf("%s:%d", smtpHost, smtpPort), tlsConfig)
+	if err != nil {
+		return err
+	}
+	// 打开 SMTP 连接
+	client, err := smtp.NewClient(conn, smtpHost)
+	if err != nil {
+		return err
+	}
+	// 使用认证信息登录
+	if err = client.Auth(auth); err != nil {
+		return err
+	}
+	// 设置发件人
+	if err = client.Mail(email); err != nil {
+		return err
+	}
+	// 设置收件人
+	for _, addr := range to {
+		if err = client.Rcpt(addr); err != nil {
+			return err
+		}
+	}
+	// 发送邮件内容
+	w, err := client.Data()
+	if err != nil {
+		return err
+	}
+	_, err = w.Write(msg)
+	if err != nil {
+		return err
+	}
+	err = w.Close()
+	if err != nil {
+		return err
+	}
+	// 关闭 SMTP 连接
+	return client.Quit()
+}
+
+func requestUserRank(info []string, c *gin.Context) {
+	var response struct {
+		Status string    `json:"status"`
+		Users  []db.User `json:"users"`
+	}
+	response.Status = config.RETURN_FAIL
+	response.Users = make([]db.User, 0)
+	err := DB.Model(&db.User{}).
+		Select([]string{"id", "name", "seek_help", "lend_hand", "score", "register_time"}).
+		Order("score DESC").Limit(100).Find(&response.Users).Error
+	if err != nil {
+		logger.Errorln(err)
+	} else {
+		response.Status = config.RETURN_SUCCEED
+	}
+	c.JSON(http.StatusOK, response)
+}
+
+// {seekHelp,seekHelpId,ban}
+// {lendHand,lendHandId,ban}
+// {user,userId,ban}
+func changeBan(info []string, c *gin.Context) {
+	var response struct {
+		Status string `json:"status"`
+	}
+	response.Status = config.RETURN_FAIL
+	dbId, err := strconv.Atoi(info[1])
+	if err != nil {
+		logger.Errorln(err)
+	} else {
+		ban, err := strconv.Atoi(info[2])
+		if err != nil {
+			logger.Errorln(err)
+		} else {
+			if info[0] == "seekHelp" {
+				err = DB.Model(&db.SeekHelp{}).
+					Where(&db.SeekHelp{ID: dbId}).Update("ban", ban).Error
+			} else if info[0] == "lendHand" {
+				err = DB.Model(&db.LendHand{}).
+					Where(&db.LendHand{ID: dbId}).Update("ban", ban).Error
+			} else if info[0] == "user" {
+				err = DB.Model(&db.User{}).
+					Where(&db.User{ID: dbId}).Update("ban", ban).Error
+			}
+			if err != nil {
+				logger.Errorln(err)
+			} else {
+				response.Status = config.RETURN_SUCCEED
+			}
+		}
+	}
+	c.JSON(http.StatusOK, response)
 }
 
 // {"username",name,password}
@@ -93,7 +213,7 @@ func login(info []string, c *gin.Context) {
 		ConfigData   []int         `json:"configData"`
 		User         db.User       `json:"user"`
 		UnsolvedList []db.SeekHelp `json:"unsolvedList"`
-		// 1 内部错误 2 验证码过期 3 验证码或密码错误 4 邮箱地址或者用户名不存在
+		// 1 内部错误 2 验证码过期 3 验证码或密码错误 4 邮箱地址或者用户名不存在 5 该用户正被封禁
 		ErrorCode int `json:"errorCode"`
 	}
 	response.Status = config.RETURN_FAIL
@@ -134,6 +254,10 @@ func login(info []string, c *gin.Context) {
 				flag = true
 			}
 		}
+	}
+	if response.User.Ban > 0 && !response.User.IsManager {
+		response.ErrorCode = 5
+		flag = false
 	}
 	if flag {
 		flag = false
@@ -248,7 +372,19 @@ func register(info []string, c *gin.Context) {
 			if err != nil {
 				logger.Errorln(err)
 			} else {
-				response.Status = config.RETURN_SUCCEED
+				// 第一个用户默认升级为管理员
+				if response.User.ID == 1 {
+					response.User.IsManager = true
+					err = DB.Model(&db.User{}).Where(&db.User{ID: response.User.ID}).
+						Updates(&response.User).Error
+					if err != nil {
+						logger.Errorln(err)
+					} else {
+						response.Status = config.RETURN_SUCCEED
+					}
+				} else {
+					response.Status = config.RETURN_SUCCEED
+				}
 			}
 		}
 	}
@@ -507,10 +643,14 @@ func downloadFile(info []string, c *gin.Context) {
 	c.File(info[0])
 }
 
-// {"seekHelp",date}
-// {"lendHand",seekHelpId}
+// {"seekHelp",isManager,date}
+// {"lendHand",isManager,seekHelpId}
 // {"comment",helpType,helpId}
 func requestList(info []string, c *gin.Context) {
+	ban := 1
+	if info[1] == "true" {
+		ban = 2
+	}
 	if info[0] == "seekHelp" {
 		var response struct {
 			Status       string        `json:"status"`
@@ -521,7 +661,7 @@ func requestList(info []string, c *gin.Context) {
 		response.SeekHelpList = make([]db.SeekHelp, 0)
 		response.Info = make([]string, 0)
 		err := DB.Model(&db.SeekHelp{}).
-			Where("upload_time LIKE ?", info[1]+"%").
+			Where("upload_time LIKE ? AND ban < ?", info[2]+"%", ban).
 			Find(&response.SeekHelpList).Error
 		if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
 			response.Info = append(response.Info, config.INTERNAL_ERROR)
@@ -546,13 +686,13 @@ func requestList(info []string, c *gin.Context) {
 		response.Status = config.RETURN_FAIL
 		response.LendHandList = make([]db.LendHand, 0)
 		response.Info = make([]string, 0)
-		seekHelpId, err := strconv.Atoi(info[1])
+		seekHelpId, err := strconv.Atoi(info[2])
 		if err != nil {
 			response.Info = append(response.Info, config.INTERNAL_ERROR)
 			logger.Errorln(err)
 		} else {
 			err = DB.Model(&db.LendHand{}).
-				Where(&db.LendHand{SeekHelpId: seekHelpId}).
+				Where("seek_help_id = ? AND ban < ?", seekHelpId, ban).
 				Find(&response.LendHandList).Error
 			if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
 				response.Info = append(response.Info, config.INTERNAL_ERROR)

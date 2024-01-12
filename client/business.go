@@ -37,6 +37,8 @@ func ClientInit(loggerInstance *zap.SugaredLogger) {
 		"downloadFile":         downloadFile,
 		"likeOperate":          likeOperate,
 		"sendAComment":         sendAComment,
+		"changeBan":            changeBan,
+		"requestUserRank":      requestUserRank,
 	}
 	formFuncMap = make(map[string]formFunc)
 	formFuncMap = map[string]formFunc{
@@ -48,7 +50,7 @@ func ClientInit(loggerInstance *zap.SugaredLogger) {
 // 关于cookie的使用，可以在总入口进行校验，如果不能读取到cookie或者cookie不存在与redis的set中，
 // (有两个set，一个用户，一个管理员)，那么就需要重新登录，该次请求就没有必要继续下去了
 
-func jsonRequest(c *gin.Context) {
+func JsonRequest(c *gin.Context) {
 	var request struct {
 		RequestType string   `json:"requestType"`
 		Info        []string `json:"info"`
@@ -65,7 +67,7 @@ func jsonRequest(c *gin.Context) {
 	}
 }
 
-func formRequest(c *gin.Context) {
+func FormRequest(c *gin.Context) {
 	requestType := c.Request.FormValue("requestType")
 	if v, ok := formFuncMap[requestType]; ok {
 		v(c)
